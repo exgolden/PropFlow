@@ -1,0 +1,252 @@
+<!-- templates/unidades/detail.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Unidad {{ unit.numero }}{% endblock %}
+{% block page_title %}Unidad {{ unit.numero }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <!-- ── Unit info ────────────────────────────────────────────────── -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                Información de la unidad
+                <button class="btn btn-sm btn-primary" onclick="toggleEdit()">
+                    Editar
+                </button>
+            </div>
+            <div class="p-3">
+                <div class="row g-3" id="view-mode">
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Número</div>
+                        <div class="fw-500">{{ unit.numero }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Tipo</div>
+                        <div>{{ unit.tipo | capitalize }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Área</div>
+                        <div>{{ unit.area_m2 }} m²</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Renta base</div>
+                        <div>${{ "{:,.0f}".format(unit.renta_base) }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Estado</div>
+                        <span class="badge rounded-pill badge-{{ unit.estado }}">
+                            {{ unit.estado | capitalize }}
+                        </span>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Creado</div>
+                        <div>{{ unit.creado_en }}</div>
+                    </div>
+                </div>
+
+                <!-- ── Edit form ─────────────────────────────────────── -->
+                <div id="edit-mode" class="d-none">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Número</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   id="e-numero" value="{{ unit.numero }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Área (m²)</label>
+                            <input type="number" class="form-control form-control-sm"
+                                   id="e-area" value="{{ unit.area_m2 }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select form-select-sm" id="e-tipo">
+                                <option value="oficina" {% if unit.tipo == 'oficina' %}selected{% endif %}>Oficina</option>
+                                <option value="local" {% if unit.tipo == 'local' %}selected{% endif %}>Local</option>
+                                <option value="bodega" {% if unit.tipo == 'bodega' %}selected{% endif %}>Bodega</option>
+                                <option value="consultorio" {% if unit.tipo == 'consultorio' %}selected{% endif %}>Consultorio</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Renta base</label>
+                            <input type="number" class="form-control form-control-sm"
+                                   id="e-renta" value="{{ unit.renta_base }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select form-select-sm" id="e-estado">
+                                <option value="disponible" {% if unit.estado == 'disponible' %}selected{% endif %}>Disponible</option>
+                                <option value="ocupada" {% if unit.estado == 'ocupada' %}selected{% endif %}>Ocupada</option>
+                                <option value="mantenimiento" {% if unit.estado == 'mantenimiento' %}selected{% endif %}>Mantenimiento</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2 d-flex align-items-end gap-2">
+                            <button class="btn btn-sm btn-primary" onclick="updateUnit()">Guardar</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleEdit()">Cancelar</button>
+                        </div>
+                    </div>
+                    <div id="edit-error" class="text-danger mt-2 small d-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Active contract ──────────────────────────────────────────── -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">Contrato activo</div>
+            <div class="p-3">
+                {% if contract %}
+                <div class="row g-3">
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Inquilino</div>
+                        <div># {{ contract.inquilino_id }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Renta mensual</div>
+                        <div>${{ "{:,.0f}".format(contract.renta_mensual) }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Depósito</div>
+                        <div>${{ "{:,.0f}".format(contract.deposito) }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Inicio</div>
+                        <div>{{ contract.fecha_inicio }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Fin</div>
+                        <div>{{ contract.fecha_fin }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Día de cobro</div>
+                        <div>Día {{ contract.dia_cobro }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No hay contrato activo para esta unidad.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Maintenance ──────────────────────────────────────────────── -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header">Mantenimientos</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Prioridad</th>
+                            <th>Estado</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in maintenance %}
+                        <tr>
+                            <td>{{ m.titulo }}</td>
+                            <td>{{ m.prioridad | capitalize }}</td>
+                            <td>
+                                <span class="badge rounded-pill badge-{{ m.estado }}">
+                                    {{ m.estado | capitalize }}
+                                </span>
+                            </td>
+                            <td>{{ m.creado_en[:10] }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                Sin mantenimientos registrados
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Documents ────────────────────────────────────────────────── -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header">Documentos</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Vence</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td>{{ doc.nombre }}</td>
+                            <td>{{ doc.tipo | capitalize }}</td>
+                            <td>{{ doc.vence_en or '—' }}</td>
+                            <td class="text-end">
+                                <a href="{{ doc.url_archivo }}" target="_blank"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                Sin documentos adjuntos
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleEdit() {
+        document.getElementById('view-mode').classList.toggle('d-none');
+        document.getElementById('edit-mode').classList.toggle('d-none');
+    }
+
+    async function updateUnit() {
+        const error = document.getElementById('edit-error');
+        error.classList.add('d-none');
+        const data = {
+            numero:     document.getElementById('e-numero').value.trim(),
+            area_m2:    parseFloat(document.getElementById('e-area').value),
+            tipo:       document.getElementById('e-tipo').value,
+            renta_base: parseFloat(document.getElementById('e-renta').value),
+            estado:     document.getElementById('e-estado').value,
+        };
+        try {
+            const res = await fetch('/unidades/{{ unit.id }}', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,178 @@
+<!-- templates/documentos/index.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Documentos{% endblock %}
+{% block page_title %}Documentos{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <!-- ── Expiring soon ────────────────────────────────────────────── -->
+    {% if expiring %}
+    <div class="col-12">
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-0">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>
+                <strong>{{ expiring | length }} documento(s)</strong> vencen en los próximos 30 días.
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Documents table ──────────────────────────────────────────── -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                Todos los documentos
+                <button class="btn btn-sm btn-primary" id="btn-toggle" onclick="toggleForm()">
+                    + Nuevo documento
+                </button>
+            </div>
+
+            <!-- ── Upload form ───────────────────────────────────────── -->
+            <div id="form-nuevo-documento" class="p-3 border-bottom d-none">
+                <div class="row g-2">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control form-control-sm"
+                            id="f-nombre" placeholder="Contrato firmado">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select form-select-sm" id="f-tipo">
+                            <option value="contrato">Contrato</option>
+                            <option value="identificacion">Identificación</option>
+                            <option value="permiso">Permiso</option>
+                            <option value="seguro">Seguro</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label">ID Unidad</label>
+                        <input type="number" class="form-control form-control-sm"
+                            id="f-unidad" placeholder="Opcional">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label">ID Contrato</label>
+                        <input type="number" class="form-control form-control-sm"
+                            id="f-contrato" placeholder="Opcional">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label">ID Inquilino</label>
+                        <input type="number" class="form-control form-control-sm"
+                            id="f-inquilino" placeholder="Opcional">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label">Vence el</label>
+                        <input type="date" class="form-control form-control-sm" id="f-vence">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label">Archivo</label>
+                        <input type="file" class="form-control form-control-sm"
+                            id="f-archivo" accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm btn-primary" onclick="uploadDocument()">Subir</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleForm()">Cancelar</button>
+                </div>
+                <div id="form-error" class="text-danger mt-2 small d-none"></div>
+            </div>
+
+            <!-- ── Table ─────────────────────────────────────────────── -->
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Unidad</th>
+                            <th>Contrato</th>
+                            <th>Inquilino</th>
+                            <th>Vence</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td>{{ doc.nombre }}</td>
+                            <td>{{ doc.tipo | capitalize }}</td>
+                            <td>{{ '# ' ~ doc.unidad_id if doc.unidad_id else '—' }}</td>
+                            <td>{{ '# ' ~ doc.contrato_id if doc.contrato_id else '—' }}</td>
+                            <td>{{ '# ' ~ doc.inquilino_id if doc.inquilino_id else '—' }}</td>
+                            <td class="{% if doc.vence_en and doc.vence_en <= now %}text-danger{% endif %}">
+                                {{ doc.vence_en or '—' }}
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ doc.url_archivo }}" target="_blank"
+                                class="btn btn-sm btn-outline-primary">
+                                    Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No hay documentos registrados
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleForm() {
+        const form = document.getElementById('form-nuevo-documento');
+        const btn = document.getElementById('btn-toggle');
+        const isHidden = form.classList.toggle('d-none');
+        btn.textContent = isHidden ? '+ Nuevo documento' : 'Cancelar';
+    }
+
+    async function uploadDocument() {
+        const error = document.getElementById('form-error');
+        error.classList.add('d-none');
+        const archivo = document.getElementById('f-archivo').files[0];
+        if (!archivo) {
+            error.textContent = 'Por favor selecciona un archivo.';
+            error.classList.remove('d-none');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+        formData.append('nombre', document.getElementById('f-nombre').value.trim());
+        formData.append('tipo', document.getElementById('f-tipo').value);
+        formData.append('subido_por', '{{ session.get("user_id") }}');
+        const unidad = document.getElementById('f-unidad').value;
+        const contrato = document.getElementById('f-contrato').value;
+        const inquilino = document.getElementById('f-inquilino').value;
+        const vence = document.getElementById('f-vence').value;
+        if (unidad) formData.append('unidad_id', unidad);
+        if (contrato) formData.append('contrato_id', contrato);
+        if (inquilino) formData.append('inquilino_id', inquilino);
+        if (vence) formData.append('vence_en', vence);
+        try {
+            const res = await fetch('/documentos/', {
+                method: 'POST',
+                body: formData
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

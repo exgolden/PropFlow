@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+
+# uv
+.python-version
+
+# Environment & secrets
+.env
+
+# Database (never commit the actual data)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+
+# Uploads
+static/uploads/
+
+# Logs
+logs/
+
+# macOS
+.DS_Store

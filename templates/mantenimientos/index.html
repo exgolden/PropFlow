@@ -1,0 +1,237 @@
+<!-- templates/mantenimientos/index.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Mantenimientos{% endblock %}
+{% block page_title %}Mantenimientos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        Todos los mantenimientos
+        <button class="btn btn-sm btn-primary" id="btn-toggle" onclick="toggleForm()">
+            + Nuevo mantenimiento
+        </button>
+    </div>
+
+    <!-- ── New maintenance form ─────────────────────────────────────── -->
+    <div id="form-nuevo-mantenimiento" class="p-3 border-bottom d-none">
+        <div class="row g-2">
+            <div class="col-12 col-md-2">
+                <label class="form-label">ID Unidad</label>
+                <input type="number" class="form-control form-control-sm" id="f-unidad" placeholder="1">
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label">Título</label>
+                <input type="text" class="form-control form-control-sm" id="f-titulo" placeholder="Fuga de agua">
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label">Descripción</label>
+                <input type="text" class="form-control form-control-sm" id="f-descripcion" placeholder="Descripción del problema">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Prioridad</label>
+                <select class="form-select form-select-sm" id="f-prioridad">
+                    <option value="baja">Baja</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Fecha programada</label>
+                <input type="date" class="form-control form-control-sm" id="f-fecha">
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-sm btn-primary" onclick="createMaintenance()">Guardar</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleForm()">Cancelar</button>
+        </div>
+        <div id="form-error" class="text-danger mt-2 small d-none"></div>
+    </div>
+
+    <!-- ── Filters ──────────────────────────────────────────────────── -->
+    <div class="p-3 border-bottom d-flex gap-2 flex-wrap">
+        <select class="form-select form-select-sm w-auto" id="filter-estado" onchange="applyFilters()">
+            <option value="">Todos los estados</option>
+            <option value="abierto">Abierto</option>
+            <option value="en_proceso">En proceso</option>
+            <option value="resuelto">Resuelto</option>
+        </select>
+        <select class="form-select form-select-sm w-auto" id="filter-prioridad" onchange="applyFilters()">
+            <option value="">Todas las prioridades</option>
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+        </select>
+    </div>
+
+    <!-- ── Table ────────────────────────────────────────────────────── -->
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Unidad</th>
+                    <th>Título</th>
+                    <th>Prioridad</th>
+                    <th>Estado</th>
+                    <th>Costo</th>
+                    <th>Fecha programada</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="tabla-mantenimientos">
+                {% for m in maintenance %}
+                <tr data-estado="{{ m.estado }}" data-prioridad="{{ m.prioridad }}">
+                    <td># {{ m.unidad_id }}</td>
+                    <td>{{ m.titulo }}</td>
+                    <td>{{ m.prioridad | capitalize }}</td>
+                    <td>
+                        <span class="badge rounded-pill badge-{{ m.estado }}">
+                            {{ m.estado | capitalize }}
+                        </span>
+                    </td>
+                    <td>{{ '${:,.0f}'.format(m.costo) if m.costo else '—' }}</td>
+                    <td>{{ m.fecha_programada or '—' }}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary"
+                                data-id="{{ m.id }}"
+                                onclick="toggleUpdate(this)">
+                            Actualizar
+                        </button>
+                    </td>
+                </tr>
+                <!-- ── Update form ───────────────────────────────────── -->
+                <tr id="update-form-{{ m.id }}" class="d-none">
+                    <td colspan="7" class="p-3">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-2">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select form-select-sm" id="estado-{{ m.id }}">
+                                    <option value="abierto" {% if m.estado == 'abierto' %}selected{% endif %}>Abierto</option>
+                                    <option value="en_proceso" {% if m.estado == 'en_proceso' %}selected{% endif %}>En proceso</option>
+                                    <option value="resuelto" {% if m.estado == 'resuelto' %}selected{% endif %}>Resuelto</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <label class="form-label">Costo</label>
+                                <input type="number" class="form-control form-control-sm"
+                                    id="costo-{{ m.id }}" value="{{ m.costo or '' }}" placeholder="0">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Descripción</label>
+                                <input type="text" class="form-control form-control-sm"
+                                    id="desc-{{ m.id }}" value="{{ m.descripcion or '' }}">
+                            </div>
+                            <div class="col-12 col-md-2 d-flex align-items-end gap-2">
+                                <button class="btn btn-sm btn-primary"
+                                        data-id="{{ m.id }}"
+                                        onclick="updateMaintenance(this)">
+                                    Guardar
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        data-id="{{ m.id }}"
+                                        onclick="toggleUpdate(this)">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                        <div id="update-error-{{ m.id }}" class="text-danger mt-2 small d-none"></div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        No hay mantenimientos registrados
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleForm() {
+        const form = document.getElementById('form-nuevo-mantenimiento');
+        const btn = document.getElementById('btn-toggle');
+        const isHidden = form.classList.toggle('d-none');
+        btn.textContent = isHidden ? '+ Nuevo mantenimiento' : 'Cancelar';
+    }
+
+    function toggleUpdate(btn) {
+        const id = btn.getAttribute('data-id');
+        const row = document.getElementById('update-form-' + id);
+        row.classList.toggle('d-none');
+    }
+
+    function applyFilters() {
+        const estado = document.getElementById('filter-estado').value;
+        const prioridad = document.getElementById('filter-prioridad').value;
+        document.querySelectorAll('#tabla-mantenimientos tr[data-estado]').forEach(row => {
+            const matchEstado = !estado || row.dataset.estado === estado;
+            const matchPrioridad = !prioridad || row.dataset.prioridad === prioridad;
+            row.style.display = matchEstado && matchPrioridad ? '' : 'none';
+        });
+    }
+
+    async function createMaintenance() {
+        const error = document.getElementById('form-error');
+        error.classList.add('d-none');
+        const data = {
+            unidad_id:       parseInt(document.getElementById('f-unidad').value),
+            titulo:          document.getElementById('f-titulo').value.trim(),
+            descripcion:     document.getElementById('f-descripcion').value.trim() || null,
+            prioridad:       document.getElementById('f-prioridad').value,
+            fecha_programada: document.getElementById('f-fecha').value || null,
+        };
+        try {
+            const res = await fetch('/mantenimientos/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+
+    async function updateMaintenance(btn) {
+        const id = btn.getAttribute('data-id');
+        const error = document.getElementById('update-error-' + id);
+        error.classList.add('d-none');
+        const data = {
+            estado:      document.getElementById('estado-' + id).value,
+            costo:       parseFloat(document.getElementById('costo-' + id).value) || null,
+            descripcion: document.getElementById('desc-' + id).value.trim() || null,
+        };
+        try {
+            const res = await fetch('/mantenimientos/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

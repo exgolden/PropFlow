@@ -1,0 +1,245 @@
+<!-- templates/contratos/detail.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Contrato #{{ contract.id }}{% endblock %}
+{% block page_title %}Contrato #{{ contract.id }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <!-- ── Contract info ────────────────────────────────────────────── -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                Información del contrato
+                {% if contract.estado == 'activo' %}
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-primary" onclick="toggleEdit()">Editar</button>
+                    <button class="btn btn-sm btn-danger" onclick="terminateContract()">Terminar contrato</button>
+                </div>
+                {% endif %}
+            </div>
+            <div class="p-3">
+                <div class="row g-3" id="view-mode">
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Unidad</div>
+                        <div>
+                            {% if unit %}
+                            <a href="{{ url_for('unidades.unit_detail_view', unit_id=unit.id) }}">
+                                {{ unit.numero }}
+                            </a>
+                            {% else %}# {{ contract.unidad_id }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Inquilino</div>
+                        <div>
+                            {% if tenant %}
+                            <a href="{{ url_for('inquilinos.tenant_detail_view', tenant_id=tenant.id) }}">
+                                {{ tenant.empresa }}
+                            </a>
+                            {% else %}# {{ contract.inquilino_id }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Renta mensual</div>
+                        <div>${{ "{:,.0f}".format(contract.renta_mensual) }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Depósito</div>
+                        <div>${{ "{:,.0f}".format(contract.deposito) }}</div>
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <div class="stat-label">Día cobro</div>
+                        <div>Día {{ contract.dia_cobro }}</div>
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <div class="stat-label">Inicio</div>
+                        <div>{{ contract.fecha_inicio }}</div>
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <div class="stat-label">Fin</div>
+                        <div>{{ contract.fecha_fin }}</div>
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <div class="stat-label">Estado</div>
+                        <span class="badge rounded-pill badge-{{ contract.estado }}">
+                            {{ contract.estado | capitalize }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- ── Edit form ─────────────────────────────────────── -->
+                <div id="edit-mode" class="d-none">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-3">
+                            <label class="form-label">Fecha fin</label>
+                            <input type="date" class="form-control form-control-sm"
+                                   id="e-fin" value="{{ contract.fecha_fin }}">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label">Renta mensual</label>
+                            <input type="number" class="form-control form-control-sm"
+                                   id="e-renta" value="{{ contract.renta_mensual }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Depósito</label>
+                            <input type="number" class="form-control form-control-sm"
+                                   id="e-deposito" value="{{ contract.deposito }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Día de cobro</label>
+                            <input type="number" class="form-control form-control-sm"
+                                   id="e-dia" value="{{ contract.dia_cobro }}" min="1" max="28">
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-sm btn-primary" onclick="updateContract()">Guardar</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleEdit()">Cancelar</button>
+                    </div>
+                    <div id="edit-error" class="text-danger mt-2 small d-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Invoices ─────────────────────────────────────────────────── -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header">Facturas</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Período</th>
+                            <th>Monto</th>
+                            <th>Vencimiento</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td>{{ invoice.periodo_inicio }}</td>
+                            <td>${{ "{:,.0f}".format(invoice.monto) }}</td>
+                            <td>{{ invoice.fecha_vencimiento }}</td>
+                            <td>
+                                {% if invoice.pagado_en %}
+                                <span class="badge rounded-pill badge-pagada">Pagada</span>
+                                {% elif invoice.fecha_vencimiento < now %}
+                                <span class="badge rounded-pill badge-vencida">Vencida</span>
+                                {% else %}
+                                <span class="badge rounded-pill badge-pendiente">Pendiente</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                Sin facturas generadas
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Documents ────────────────────────────────────────────────── -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header">Documentos</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Vence</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td>{{ doc.nombre }}</td>
+                            <td>{{ doc.tipo | capitalize }}</td>
+                            <td>{{ doc.vence_en or '—' }}</td>
+                            <td class="text-end">
+                                <a href="{{ doc.url_archivo }}" target="_blank"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                Sin documentos adjuntos
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleEdit() {
+        document.getElementById('view-mode').classList.toggle('d-none');
+        document.getElementById('edit-mode').classList.toggle('d-none');
+    }
+
+    async function updateContract() {
+        const error = document.getElementById('edit-error');
+        error.classList.add('d-none');
+        const data = {
+            fecha_fin:     document.getElementById('e-fin').value,
+            renta_mensual: parseFloat(document.getElementById('e-renta').value),
+            deposito:      parseFloat(document.getElementById('e-deposito').value),
+            dia_cobro:     parseInt(document.getElementById('e-dia').value),
+        };
+        try {
+            const res = await fetch('/contratos/{{ contract.id }}', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+
+    async function terminateContract() {
+        if (!confirm('¿Estás seguro de que deseas terminar este contrato?')) return;
+        try {
+            const res = await fetch('/contratos/{{ contract.id }}/terminar', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                alert(json.error);
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            alert('Error de conexión.');
+        }
+    }
+</script>
+{% endblock %}

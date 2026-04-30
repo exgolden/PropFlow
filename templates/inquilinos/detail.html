@@ -1,0 +1,165 @@
+<!-- templates/inquilinos/detail.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — {{ tenant.empresa }}{% endblock %}
+{% block page_title %}{{ tenant.empresa }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <!-- ── Tenant info ──────────────────────────────────────────────── -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                Información del inquilino
+                <button class="btn btn-sm btn-primary" onclick="toggleEdit()">
+                    Editar
+                </button>
+            </div>
+            <div class="p-3">
+                <div class="row g-3" id="view-mode">
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Empresa</div>
+                        <div>{{ tenant.empresa }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Contacto</div>
+                        <div>{{ tenant.nombre_contacto }}</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="stat-label">Correo</div>
+                        <div>{{ tenant.correo }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">Teléfono</div>
+                        <div>{{ tenant.telefono or '—' }}</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="stat-label">RFC</div>
+                        <div>{{ tenant.rfc or '—' }}</div>
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <div class="stat-label">Creado</div>
+                        <div>{{ tenant.creado_en[:10] }}</div>
+                    </div>
+                </div>
+
+                <!-- ── Edit form ─────────────────────────────────────── -->
+                <div id="edit-mode" class="d-none">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-3">
+                            <label class="form-label">Empresa</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   id="e-empresa" value="{{ tenant.empresa }}">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label">Contacto</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   id="e-contacto" value="{{ tenant.nombre_contacto }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Correo</label>
+                            <input type="email" class="form-control form-control-sm"
+                                   id="e-correo" value="{{ tenant.correo }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   id="e-telefono" value="{{ tenant.telefono or '' }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">RFC</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   id="e-rfc" value="{{ tenant.rfc or '' }}">
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-sm btn-primary" onclick="updateTenant()">Guardar</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleEdit()">Cancelar</button>
+                    </div>
+                    <div id="edit-error" class="text-danger mt-2 small d-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Documents ────────────────────────────────────────────────── -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">Documentos</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Vence</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td>{{ doc.nombre }}</td>
+                            <td>{{ doc.tipo | capitalize }}</td>
+                            <td>{{ doc.vence_en or '—' }}</td>
+                            <td class="text-end">
+                                <a href="{{ doc.url_archivo }}" target="_blank"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                Sin documentos adjuntos
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleEdit() {
+        document.getElementById('view-mode').classList.toggle('d-none');
+        document.getElementById('edit-mode').classList.toggle('d-none');
+    }
+
+    async function updateTenant() {
+        const error = document.getElementById('edit-error');
+        error.classList.add('d-none');
+        const data = {
+            empresa:         document.getElementById('e-empresa').value.trim(),
+            nombre_contacto: document.getElementById('e-contacto').value.trim(),
+            correo:          document.getElementById('e-correo').value.trim(),
+            telefono:        document.getElementById('e-telefono').value.trim() || null,
+            rfc:             document.getElementById('e-rfc').value.trim() || null,
+        };
+        try {
+            const res = await fetch('/inquilinos/{{ tenant.id }}', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

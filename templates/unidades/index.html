@@ -1,0 +1,129 @@
+<!-- templates/unidades/index.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Unidades{% endblock %}
+{% block page_title %}Unidades{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        Todas las unidades
+        <button class="btn btn-sm btn-primary" onclick="toggleForm()">
+            + Nueva unidad
+        </button>
+    </div>
+
+    <!-- ── New unit form ────────────────────────────────────────────── -->
+    <div id="form-nueva-unidad" class="p-3 border-bottom d-none">
+        <div class="row g-2">
+            <div class="col-12 col-md-2">
+                <label class="form-label">Número</label>
+                <input type="text" class="form-control form-control-sm" id="f-numero" placeholder="A-01">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Área (m²)</label>
+                <input type="number" class="form-control form-control-sm" id="f-area" placeholder="45.5">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Tipo</label>
+                <select class="form-select form-select-sm" id="f-tipo">
+                    <option value="">Seleccionar</option>
+                    <option value="oficina">Oficina</option>
+                    <option value="local">Local</option>
+                    <option value="bodega">Bodega</option>
+                    <option value="consultorio">Consultorio</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Renta base</label>
+                <input type="number" class="form-control form-control-sm" id="f-renta" placeholder="12000">
+            </div>
+            <div class="col-12 col-md-4 d-flex align-items-end gap-2">
+                <button class="btn btn-sm btn-primary" onclick="createUnit()">Guardar</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleForm()">Cancelar</button>
+            </div>
+        </div>
+        <div id="form-error" class="text-danger mt-2 small d-none"></div>
+    </div>
+
+    <!-- ── Table ────────────────────────────────────────────────────── -->
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Tipo</th>
+                    <th>Área</th>
+                    <th>Renta base</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="tabla-unidades">
+                {% for unidad in units %}
+                <tr>
+                    <td>{{ unidad.numero }}</td>
+                    <td>{{ unidad.tipo | capitalize }}</td>
+                    <td>{{ unidad.area_m2 }} m²</td>
+                    <td>${{ "{:,.0f}".format(unidad.renta_base) }}</td>
+                    <td>
+                        <span class="badge rounded-pill badge-{{ unidad.estado }}">
+                            {{ unidad.estado | capitalize }}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('unidades.unit_detail_view', unit_id=unidad.id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            Ver
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No hay unidades registradas
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleForm() {
+        const form = document.getElementById('form-nueva-unidad');
+        form.classList.toggle('d-none');
+    }
+
+    async function createUnit() {
+        const error = document.getElementById('form-error');
+        error.classList.add('d-none');
+        const data = {
+            numero:     document.getElementById('f-numero').value.trim(),
+            area_m2:    parseFloat(document.getElementById('f-area').value),
+            tipo:       document.getElementById('f-tipo').value,
+            renta_base: parseFloat(document.getElementById('f-renta').value),
+        };
+        try {
+            const res = await fetch('/unidades/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

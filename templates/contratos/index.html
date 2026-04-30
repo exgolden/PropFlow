@@ -1,0 +1,139 @@
+<!-- templates/contratos/index.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Contratos{% endblock %}
+{% block page_title %}Contratos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        Todos los contratos
+        <button class="btn btn-sm btn-primary" onclick="toggleForm()">
+            + Nuevo contrato
+        </button>
+    </div>
+
+    <!-- ── New contract form ────────────────────────────────────────── -->
+    <div id="form-nuevo-contrato" class="p-3 border-bottom d-none">
+        <div class="row g-2">
+            <div class="col-12 col-md-2">
+                <label class="form-label">ID Unidad</label>
+                <input type="number" class="form-control form-control-sm" id="f-unidad" placeholder="1">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">ID Inquilino</label>
+                <input type="number" class="form-control form-control-sm" id="f-inquilino" placeholder="1">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Fecha inicio</label>
+                <input type="date" class="form-control form-control-sm" id="f-inicio">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Fecha fin</label>
+                <input type="date" class="form-control form-control-sm" id="f-fin">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Renta mensual</label>
+                <input type="number" class="form-control form-control-sm" id="f-renta" placeholder="12000">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Depósito</label>
+                <input type="number" class="form-control form-control-sm" id="f-deposito" placeholder="24000">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Día de cobro</label>
+                <input type="number" class="form-control form-control-sm" id="f-dia" placeholder="1" min="1" max="28">
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-sm btn-primary" onclick="createContract()">Guardar</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleForm()">Cancelar</button>
+        </div>
+        <div id="form-error" class="text-danger mt-2 small d-none"></div>
+    </div>
+
+    <!-- ── Table ────────────────────────────────────────────────────── -->
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Unidad</th>
+                    <th>Inquilino</th>
+                    <th>Renta mensual</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contract in contracts %}
+                <tr>
+                    <td># {{ contract.unidad_id }}</td>
+                    <td># {{ contract.inquilino_id }}</td>
+                    <td>${{ "{:,.0f}".format(contract.renta_mensual) }}</td>
+                    <td>{{ contract.fecha_inicio }}</td>
+                    <td>{{ contract.fecha_fin }}</td>
+                    <td>
+                        <span class="badge rounded-pill badge-{{ contract.estado }}">
+                            {{ contract.estado | capitalize }}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('contratos.contract_detail_view', contract_id=contract.id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            Ver
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        No hay contratos registrados
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleForm() {
+        document.getElementById('form-nuevo-contrato').classList.toggle('d-none');
+    }
+
+    async function createContract() {
+        const error = document.getElementById('form-error');
+        error.classList.add('d-none');
+        const data = {
+            unidad_id:     parseInt(document.getElementById('f-unidad').value),
+            inquilino_id:  parseInt(document.getElementById('f-inquilino').value),
+            fecha_inicio:  document.getElementById('f-inicio').value,
+            fecha_fin:     document.getElementById('f-fin').value,
+            renta_mensual: parseFloat(document.getElementById('f-renta').value),
+            deposito:      parseFloat(document.getElementById('f-deposito').value) || 0,
+            dia_cobro:     parseInt(document.getElementById('f-dia').value) || 1,
+        };
+        try {
+            const res = await fetch('/contratos/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

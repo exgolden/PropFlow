@@ -1,0 +1,191 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── Stats ───────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card p-3">
+            <div class="stat-label">Unidades</div>
+            <div class="stat-value">{{ stats.total_units }}</div>
+            <div class="stat-sub">
+                <span class="stat-dot" style="background:#065f46"></span>{{ stats.occupied_units }} ocupadas
+                &nbsp;·&nbsp;
+                <span class="stat-dot" style="background:#6B21A8"></span>{{ stats.vacant_units }} disponibles
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3">
+            <div class="stat-label">Inquilinos</div>
+            <div class="stat-value">{{ stats.total_tenants }}</div>
+            <div class="stat-sub">
+                <span class="stat-dot" style="background:#6B21A8"></span>{{ stats.active_contracts }} contratos activos
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3">
+            <div class="stat-label">Facturas pendientes</div>
+            <div class="stat-value {% if stats.overdue_invoices > 0 %}text-danger{% endif %}">
+                {{ stats.pending_invoices }}
+            </div>
+            <div class="stat-sub">
+                <span class="stat-dot" style="background:#991b1b"></span>{{ stats.overdue_invoices }} vencidas
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3">
+            <div class="stat-label">Mantenimientos</div>
+            <div class="stat-value {% if stats.urgent_maintenance > 0 %}text-warning{% endif %}">
+                {{ stats.open_maintenance }}
+            </div>
+            <div class="stat-sub">
+                <span class="stat-dot" style="background:#92400e"></span>{{ stats.urgent_maintenance }} urgentes
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Tables ──────────────────────────────────────────────────────── -->
+<div class="row g-3">
+
+    <!-- Unidades recientes -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                Unidades recientes
+                <a href="{{ url_for('unidades.list_units') }}" class="btn btn-sm btn-primary">
+                    Ver todas
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Tipo</th>
+                            <th>Renta base</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unidad in recent_units %}
+                        <tr>
+                            <td>{{ unidad.numero }}</td>
+                            <td>{{ unidad.tipo | capitalize }}</td>
+                            <td>${{ "{:,.0f}".format(unidad.renta_base) }}</td>
+                            <td>
+                                <span class="badge rounded-pill badge-{{ unidad.estado }}">
+                                    {{ unidad.estado | capitalize }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                No hay unidades registradas
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Facturas vencidas -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                Facturas vencidas
+                <a href="{{ url_for('facturas.list_invoices') }}" class="btn btn-sm btn-primary">
+                    Ver todas
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Contrato</th>
+                            <th>Período</th>
+                            <th>Monto</th>
+                            <th>Vencimiento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for factura in overdue_invoices %}
+                        <tr>
+                            <td># {{ factura.contrato_id }}</td>
+                            <td>{{ factura.periodo_inicio }}</td>
+                            <td>${{ "{:,.0f}".format(factura.monto) }}</td>
+                            <td class="text-danger">{{ factura.fecha_vencimiento }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                No hay facturas vencidas
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contratos recientes -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                Contratos recientes
+                <a href="{{ url_for('contratos.list_contracts') }}" class="btn btn-sm btn-primary">
+                    Ver todos
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Unidad</th>
+                            <th>Inquilino</th>
+                            <th>Renta mensual</th>
+                            <th>Inicio</th>
+                            <th>Fin</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contrato in recent_contracts %}
+                        <tr>
+                            <td># {{ contrato.unidad_id }}</td>
+                            <td># {{ contrato.inquilino_id }}</td>
+                            <td>${{ "{:,.0f}".format(contrato.renta_mensual) }}</td>
+                            <td>{{ contrato.fecha_inicio }}</td>
+                            <td>{{ contrato.fecha_fin }}</td>
+                            <td>
+                                <span class="badge rounded-pill badge-{{ contrato.estado }}">
+                                    {{ contrato.estado | capitalize }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-3">
+                                No hay contratos registrados
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

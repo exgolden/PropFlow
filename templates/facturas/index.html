@@ -1,0 +1,147 @@
+<!-- templates/facturas/index.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Facturas{% endblock %}
+{% block page_title %}Facturas{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        Todas las facturas
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Contrato</th>
+                    <th>Período</th>
+                    <th>Monto</th>
+                    <th>Vencimiento</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td># {{ invoice.contrato_id }}</td>
+                    <td>{{ invoice.periodo_inicio }}</td>
+                    <td>${{ "{:,.0f}".format(invoice.monto) }}</td>
+                    <td>{{ invoice.fecha_vencimiento }}</td>
+                    <td>
+                        {% if invoice.pagado_en %}
+                        <span class="badge rounded-pill badge-pagada">Pagada</span>
+                        {% elif invoice.fecha_vencimiento < now %}
+                        <span class="badge rounded-pill badge-vencida">Vencida</span>
+                        {% else %}
+                        <span class="badge rounded-pill badge-pendiente">Pendiente</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary"
+                                data-id="{{ invoice.id }}"
+                                data-paid="{{ 'true' if invoice.pagado_en else 'false' }}"
+                                onclick="togglePay(this)">
+                            {% if invoice.pagado_en %}Ver pago{% else %}Registrar pago{% endif %}
+                        </button>
+                    </td>
+                </tr>
+                <!-- ── Pay form ──────────────────────────────────────── -->
+                <tr id="pay-form-{{ invoice.id }}" class="d-none">
+                    <td colspan="6" class="p-3">
+                        {% if invoice.pagado_en %}
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">Pagado el</div>
+                                <div>{{ invoice.pagado_en[:10] }}</div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">Método</div>
+                                <div>{{ invoice.metodo_pago | capitalize }}</div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-label">Referencia</div>
+                                <div>{{ invoice.referencia_pago or '—' }}</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="row g-2">
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Método de pago</label>
+                                <select class="form-select form-select-sm" id="metodo-{{ invoice.id }}">
+                                    <option value="transferencia">Transferencia</option>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="credito">Crédito</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Referencia</label>
+                                <input type="text" class="form-control form-control-sm"
+                                    id="ref-{{ invoice.id }}" placeholder="Número de transferencia">
+                            </div>
+                            <div class="col-12 col-md-2 d-flex align-items-end gap-2">
+                                <button class="btn btn-sm btn-primary"
+                                        data-id="{{ invoice.id }}"
+                                        onclick="payInvoice(this)">
+                                        Confirmar pago
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        data-id="{{ invoice.id }}"
+                                        onclick="togglePay(this)">
+                                        Cancelar
+                                </button>
+                            </div>
+                        </div>
+                        <div id="pay-error-{{ invoice.id }}" class="text-danger mt-2 small d-none"></div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No hay facturas generadas
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePay(btn) {
+    const id = btn.getAttribute('data-id');
+    const row = document.getElementById('pay-form-' + id);
+    row.classList.toggle('d-none');
+}
+
+async function payInvoice(btn) {
+    const id = btn.getAttribute('data-id');
+    const error = document.getElementById('pay-error-' + id);
+    error.classList.add('d-none');
+    const data = {
+        metodo_pago:     document.getElementById('metodo-' + id).value,
+        referencia_pago: document.getElementById('ref-' + id).value.trim() || null,
+    };
+    try {
+        const res = await fetch('/facturas/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            error.textContent = json.error;
+            error.classList.remove('d-none');
+            return;
+        }
+        window.location.reload();
+    } catch (e) {
+        error.textContent = 'Error de conexión.';
+        error.classList.remove('d-none');
+    }
+}
+</script>
+{% endblock %}

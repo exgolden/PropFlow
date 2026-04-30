@@ -1,0 +1,123 @@
+<!-- templates/inquilinos/index.html -->
+{% extends "base.html" %}
+
+{% block title %}PropFlow — Inquilinos{% endblock %}
+{% block page_title %}Inquilinos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        Todos los inquilinos
+        <button class="btn btn-sm btn-primary" onclick="toggleForm()">
+            + Nuevo inquilino
+        </button>
+    </div>
+
+    <!-- ── New tenant form ──────────────────────────────────────────── -->
+    <div id="form-nuevo-inquilino" class="p-3 border-bottom d-none">
+        <div class="row g-2">
+            <div class="col-12 col-md-3">
+                <label class="form-label">Empresa</label>
+                <input type="text" class="form-control form-control-sm" id="f-empresa" placeholder="Empresa S.A. de C.V.">
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label">Nombre contacto</label>
+                <input type="text" class="form-control form-control-sm" id="f-contacto" placeholder="Juan Pérez">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Correo</label>
+                <input type="email" class="form-control form-control-sm" id="f-correo" placeholder="juan@empresa.com">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">Teléfono</label>
+                <input type="text" class="form-control form-control-sm" id="f-telefono" placeholder="55 1234 5678">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label">RFC</label>
+                <input type="text" class="form-control form-control-sm" id="f-rfc" placeholder="EMP123456ABC">
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-sm btn-primary" onclick="createTenant()">Guardar</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleForm()">Cancelar</button>
+        </div>
+        <div id="form-error" class="text-danger mt-2 small d-none"></div>
+    </div>
+
+    <!-- ── Table ────────────────────────────────────────────────────── -->
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Empresa</th>
+                    <th>Contacto</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>RFC</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tenant in tenants %}
+                <tr>
+                    <td>{{ tenant.empresa }}</td>
+                    <td>{{ tenant.nombre_contacto }}</td>
+                    <td>{{ tenant.correo }}</td>
+                    <td>{{ tenant.telefono or '—' }}</td>
+                    <td>{{ tenant.rfc or '—' }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('inquilinos.tenant_detail_view', tenant_id=tenant.id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            Ver
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No hay inquilinos registrados
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleForm() {
+        document.getElementById('form-nuevo-inquilino').classList.toggle('d-none');
+    }
+
+    async function createTenant() {
+        const error = document.getElementById('form-error');
+        error.classList.add('d-none');
+        const data = {
+            empresa:         document.getElementById('f-empresa').value.trim(),
+            nombre_contacto: document.getElementById('f-contacto').value.trim(),
+            correo:          document.getElementById('f-correo').value.trim(),
+            telefono:        document.getElementById('f-telefono').value.trim() || null,
+            rfc:             document.getElementById('f-rfc').value.trim() || null,
+        };
+        try {
+            const res = await fetch('/inquilinos/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                error.textContent = json.error;
+                error.classList.remove('d-none');
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            error.textContent = 'Error de conexión.';
+            error.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}
