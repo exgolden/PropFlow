@@ -1,4 +1,8 @@
-# src/controllers/documentos.py
+"""
+Controller para la gestión de documentos.
+Maneja creación, consulta, actualización y eliminación de documentos
+asociados a unidades, contratos o inquilinos.
+"""
 from db.init import get_db
 from src.logger import get_logger
 
@@ -15,7 +19,7 @@ def get_all_documents(
     Returns all documents that have not been soft deleted.
     Optionally filters by unidad_id, contrato_id, inquilino_id or tipo.
     """
-    logger.debug(f"Fetching all documents unidad_id={unidad_id} contrato_id={contrato_id} inquilino_id={inquilino_id} tipo={tipo}")
+    logger.debug("Fetching all documents unidad_id=%s contrato_id=%s inquilino_id=%s tipo=%s", unidad_id, contrato_id, inquilino_id, tipo)
     query = "SELECT * FROM documentos WHERE eliminado_en IS NULL"
     params = []
     if unidad_id:
@@ -36,15 +40,15 @@ def get_all_documents(
         return [dict(row) for row in cursor.fetchall()]
 
 
-def get_document(id: int) -> dict | None:
+def get_document(document_id: int) -> dict | None:
     """
     Returns a single document by ID, or None if not found or deleted.
     """
-    logger.debug(f"Fetching document id={id}")
+    logger.debug("Fetching document document_id=%s", document_id)
     with get_db() as conn:
         cursor = conn.execute(
             "SELECT * FROM documentos WHERE id = ? AND eliminado_en IS NULL",
-            (id,)
+            (document_id,)
         )
         row = cursor.fetchone()
         return dict(row) if row else None
@@ -61,9 +65,9 @@ def create_document(data: dict) -> dict:
     for field in required_fields:
         if not data.get(field):
             raise ValueError(f"El campo '{field}' es requerido")
-    if not any([data.get("unidad_id"), data.get("contrato_id"), data.get("inquilino_id")]):
-        logger.warning("Document creation failed — no FK provided")
-        raise ValueError("El documento debe estar asociado a una unidad, contrato o inquilino")
+        if not all([data.get("unidad_id"), data.get("contrato_id"), data.get("inquilino_id")]):
+            logger.warning("Document creation failed — missing FK")
+            raise ValueError("El documento debe estar asociado a una unidad, contrato e inquilino")
     with get_db() as conn:
         cursor = conn.execute(
             """
@@ -83,49 +87,49 @@ def create_document(data: dict) -> dict:
             )
         )
         document_id = cursor.lastrowid
-    logger.info(f"Document created id={document_id} nombre={data['nombre']} subido_por={data['subido_por']}")
+    logger.info("Document created document_id=%s nombre=%s subido_por=%s", document_id, data["nombre"], data["subido_por"])
     return get_document(document_id)
 
 
-def update_document(id: int, data: dict) -> dict | None:
+def update_document(document_id: int, data: dict) -> dict | None:
     """
     Updates an existing document. Only nombre, tipo, url_archivo
     and vence_en are updatable after creation.
     Returns the updated document, or None if not found.
     """
-    document = get_document(id)
+    document = get_document(document_id)
     if not document:
-        logger.warning(f"Document not found id={id}")
+        logger.warning("Document not found document_id=%s", document_id)
         return None
     allowed_fields = ["nombre", "tipo", "url_archivo", "vence_en"]
     updates = {k: v for k, v in data.items() if k in allowed_fields}
     if not updates:
         return document
     columns = ", ".join(f"{k} = ?" for k in updates.keys())
-    values = list(updates.values()) + [id]
+    values = list(updates.values()) + [document_id]
     with get_db() as conn:
         conn.execute(
-            f"UPDATE documentos SET {columns} WHERE id = ? AND eliminado_en IS NULL",
+            f"UPDATE documentos SET {columns} WHERE id = ? AND eliminado_en IS NULL", # nosec B608
             values
         )
-    logger.info(f"Document updated id={id} fields={list(updates.keys())}")
-    return get_document(id)
+    logger.info("Document updated document_id=%s fields=%s", document_id, list(updates.keys()))
+    return get_document(document_id)
 
 
-def delete_document(id: int) -> bool:
+def delete_document(document_id: int) -> bool:
     """
     Soft deletes a document by setting eliminado_en to the current timestamp.
     Returns True if deleted, False if not found.
     """
-    if not get_document(id):
-        logger.warning(f"Document not found for deletion id={id}")
+    if not get_document(document_id):
+        logger.warning("Document not found for deletion document_id=%s", document_id)
         return False
     with get_db() as conn:
         conn.execute(
             "UPDATE documentos SET eliminado_en = datetime('now') WHERE id = ?",
-            (id,)
+            (document_id,)
         )
-    logger.info(f"Document soft deleted id={id}")
+    logger.info("Document soft deleted document_id=%s", document_id)
     return True
 
 
@@ -134,7 +138,7 @@ def get_expiring_documents(days: int = 30) -> list[dict]:
     Returns all documents expiring within the given number of days.
     Useful for sending reminders before documents lapse.
     """
-    logger.debug(f"Fetching documents expiring within {days} days")
+    logger.debug("Fetching documents expiring within %s days", days)
     with get_db() as conn:
         cursor = conn.execute(
             """

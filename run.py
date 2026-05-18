@@ -1,13 +1,15 @@
 # run.py
+"""
+Punto de entrada de la aplicación PropFlow.
+Inicializa la base de datos, carga variables de entorno y arranca el servidor Flask.
+"""
 import os
+from dotenv import load_dotenv
 from src.__init__ import create_app
 from db.init import init_db
-from db.seed import run_seed
 
-
+load_dotenv()
 init_db()
-run_seed()
-
 app = create_app()
 
 if __name__ == "__main__":

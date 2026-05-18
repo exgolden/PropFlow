@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS mantenimientos (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     unidad_id        INTEGER NOT NULL REFERENCES unidades(id),
+    contrato_id      INTEGER REFERENCES contratos(id),
     titulo           TEXT NOT NULL,
     descripcion      TEXT,
     prioridad        TEXT NOT NULL DEFAULT 'media'

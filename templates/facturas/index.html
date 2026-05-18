@@ -5,6 +5,16 @@
 {% block page_title %}Facturas{% endblock %}
 
 {% block content %}
+
+{% if overdue %}
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-exclamation-triangle"></i>
+    <span>
+        <strong>{{ overdue | length }} factura(s)</strong> vencidas sin pagar.
+    </span>
+</div>
+{% endif %}
+
 <div class="card">
     <div class="card-header">
         Todas las facturas
@@ -31,7 +41,7 @@
                     <td>
                         {% if invoice.pagado_en %}
                         <span class="badge rounded-pill badge-pagada">Pagada</span>
-                        {% elif invoice.fecha_vencimiento < now %}
+                        {% elif invoice.fecha_vencimiento <= now.isoformat() %}
                         <span class="badge rounded-pill badge-vencida">Vencida</span>
                         {% else %}
                         <span class="badge rounded-pill badge-pendiente">Pendiente</span>
@@ -83,12 +93,12 @@
                                 <button class="btn btn-sm btn-primary"
                                         data-id="{{ invoice.id }}"
                                         onclick="payInvoice(this)">
-                                        Confirmar pago
+                                    Confirmar pago
                                 </button>
                                 <button class="btn btn-sm btn-outline-secondary"
                                         data-id="{{ invoice.id }}"
                                         onclick="togglePay(this)">
-                                        Cancelar
+                                    Cancelar
                                 </button>
                             </div>
                         </div>

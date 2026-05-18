@@ -48,19 +48,31 @@
                         </select>
                     </div>
                     <div class="col-12 col-md-2">
-                        <label class="form-label">ID Unidad</label>
-                        <input type="number" class="form-control form-control-sm"
-                            id="f-unidad" placeholder="Opcional">
+                        <label class="form-label">Unidad</label>
+                        <select class="form-select form-select-sm" id="f-unidad">
+                            <option value="">—</option>
+                            {% for unit in units %}
+                            <option value="{{ unit.id }}">Unidad {{ unit.numero }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-12 col-md-2">
-                        <label class="form-label">ID Contrato</label>
-                        <input type="number" class="form-control form-control-sm"
-                            id="f-contrato" placeholder="Opcional">
+                        <label class="form-label">Contrato</label>
+                        <select class="form-select form-select-sm" id="f-contrato">
+                            <option value="">—</option>
+                            {% for contract in contracts %}
+                            <option value="{{ contract.id }}">Contrato #{{ contract.id }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-12 col-md-2">
-                        <label class="form-label">ID Inquilino</label>
-                        <input type="number" class="form-control form-control-sm"
-                            id="f-inquilino" placeholder="Opcional">
+                        <label class="form-label">Inquilino</label>
+                        <select class="form-select form-select-sm" id="f-inquilino">
+                            <option value="">—</option>
+                            {% for tenant in tenants %}
+                            <option value="{{ tenant.id }}">{{ tenant.empresa }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-12 col-md-2">
                         <label class="form-label">Vence el</label>
@@ -86,9 +98,9 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Tipo</th>
-                            <th>Unidad</th>
-                            <th>Contrato</th>
-                            <th>Inquilino</th>
+                            <th>ID Unidad</th>
+                            <th>ID Contrato</th>
+                            <th>ID Inquilino</th>
                             <th>Vence</th>
                             <th></th>
                         </tr>
@@ -98,17 +110,29 @@
                         <tr>
                             <td>{{ doc.nombre }}</td>
                             <td>{{ doc.tipo | capitalize }}</td>
-                            <td>{{ '# ' ~ doc.unidad_id if doc.unidad_id else '—' }}</td>
-                            <td>{{ '# ' ~ doc.contrato_id if doc.contrato_id else '—' }}</td>
-                            <td>{{ '# ' ~ doc.inquilino_id if doc.inquilino_id else '—' }}</td>
-                            <td class="{% if doc.vence_en and doc.vence_en <= now %}text-danger{% endif %}">
+                            <td>{{ doc.unidad_id or '—' }}</td>
+                            <td>{{ doc.contrato_id or '—' }}</td>
+                            <td>{{ doc.inquilino_id or '—' }}</td>
+                            <td class="{% if doc.vence_en and doc.vence_en <= now.isoformat() %}text-danger{% endif %}">
                                 {{ doc.vence_en or '—' }}
                             </td>
                             <td class="text-end">
-                                <a href="{{ doc.url_archivo }}" target="_blank"
-                                class="btn btn-sm btn-outline-primary">
-                                    Ver
-                                </a>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="{{ doc.url_archivo }}" target="_blank"
+                                    class="btn btn-sm btn-outline-primary">
+                                        Ver
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            data-id="{{ doc.id }}"
+                                            onclick="generateLink(this)">
+                                        Generar enlace
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            data-id="{{ doc.id }}"
+                                            onclick="deleteDocument(this)">
+                                        Eliminar
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% else %}
@@ -133,6 +157,16 @@
         const btn = document.getElementById('btn-toggle');
         const isHidden = form.classList.toggle('d-none');
         btn.textContent = isHidden ? '+ Nuevo documento' : 'Cancelar';
+        if (isHidden) {
+            document.getElementById('f-nombre').value = '';
+            document.getElementById('f-tipo').value = 'contrato';
+            document.getElementById('f-unidad').value = '';
+            document.getElementById('f-contrato').value = '';
+            document.getElementById('f-inquilino').value = '';
+            document.getElementById('f-vence').value = '';
+            document.getElementById('f-archivo').value = '';
+            document.getElementById('form-error').classList.add('d-none');
+        }
     }
 
     async function uploadDocument() {
@@ -144,14 +178,19 @@
             error.classList.remove('d-none');
             return;
         }
+        const unidad = document.getElementById('f-unidad').value;
+        const contrato = document.getElementById('f-contrato').value;
+        const inquilino = document.getElementById('f-inquilino').value;
+        if (!unidad || !contrato || !inquilino) {
+            error.textContent = 'Debes asociar el documento a una unidad, contrato e inquilino.';
+            error.classList.remove('d-none');
+            return;
+        }
         const formData = new FormData();
         formData.append('archivo', archivo);
         formData.append('nombre', document.getElementById('f-nombre').value.trim());
         formData.append('tipo', document.getElementById('f-tipo').value);
         formData.append('subido_por', '{{ session.get("user_id") }}');
-        const unidad = document.getElementById('f-unidad').value;
-        const contrato = document.getElementById('f-contrato').value;
-        const inquilino = document.getElementById('f-inquilino').value;
         const vence = document.getElementById('f-vence').value;
         if (unidad) formData.append('unidad_id', unidad);
         if (contrato) formData.append('contrato_id', contrato);
@@ -172,6 +211,44 @@
         } catch (e) {
             error.textContent = 'Error de conexión.';
             error.classList.remove('d-none');
+        }
+    }
+
+    async function generateLink(btn) {
+        const id = btn.getAttribute('data-id');
+        try {
+            const res = await fetch('/documentos/' + id + '/token', {
+                method: 'POST',
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                alert(json.error);
+                return;
+            }
+            await navigator.clipboard.writeText(json.url);
+            const original = btn.textContent;
+            btn.textContent = 'Enlace copiado';
+            setTimeout(() => { btn.textContent = original; }, 2000);
+        } catch (e) {
+            alert('Error al generar enlace.');
+        }
+    }
+
+    async function deleteDocument(btn) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este documento? Esta acción no se puede deshacer.')) return;
+        const id = btn.getAttribute('data-id');
+        try {
+            const res = await fetch('/documentos/' + id, {
+                method: 'DELETE',
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                alert(json.error);
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            alert('Error de conexión.');
         }
     }
 </script>

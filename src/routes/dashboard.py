@@ -1,4 +1,7 @@
-# src/routes/dashboard.py
+"""
+Rutas para el dashboard principal.
+Muestra un resumen estadístico del sistema y registros recientes.
+"""
 from flask import Blueprint, render_template, session, redirect, url_for
 from src.routes.usuarios import require_auth
 from src.controllers.unidades import get_all_units
@@ -9,12 +12,9 @@ from src.controllers.mantenimientos import get_all_maintenance
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
-
 @dashboard_bp.get("/")
 def root():
-    """
-    Redirects root to dashboard if logged in, otherwise to login.
-    """
+    """Redirects root to dashboard if logged in, otherwise to login."""
     if "user_id" not in session:
         return redirect(url_for("usuarios.login"))
     return redirect(url_for("dashboard.index"))
@@ -23,9 +23,7 @@ def root():
 @dashboard_bp.get("/dashboard")
 @require_auth
 def index():
-    """
-    Main dashboard — summary stats and recent records.
-    """
+    """Main dashboard — summary stats and recent records."""
     units = get_all_units()
     tenants = get_all_tenants()
     contracts = get_all_contracts()

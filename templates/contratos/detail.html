@@ -53,11 +53,11 @@
                         <div class="stat-label">Día cobro</div>
                         <div>Día {{ contract.dia_cobro }}</div>
                     </div>
-                    <div class="col-6 col-md-1">
+                    <div class="col-6 col-md-2">
                         <div class="stat-label">Inicio</div>
                         <div>{{ contract.fecha_inicio }}</div>
                     </div>
-                    <div class="col-6 col-md-1">
+                    <div class="col-6 col-md-2">
                         <div class="stat-label">Fin</div>
                         <div>{{ contract.fecha_fin }}</div>
                     </div>
@@ -126,7 +126,7 @@
                             <td>
                                 {% if invoice.pagado_en %}
                                 <span class="badge rounded-pill badge-pagada">Pagada</span>
-                                {% elif invoice.fecha_vencimiento < now %}
+                                {% elif invoice.fecha_vencimiento < now.isoformat() %}
                                 <span class="badge rounded-pill badge-vencida">Vencida</span>
                                 {% else %}
                                 <span class="badge rounded-pill badge-pendiente">Pendiente</span>

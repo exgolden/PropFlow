@@ -49,6 +49,7 @@
         <table class="table mb-0">
             <thead>
                 <tr>
+                    <th>ID Inquilino</th>
                     <th>Empresa</th>
                     <th>Contacto</th>
                     <th>Correo</th>
@@ -60,21 +61,29 @@
             <tbody>
                 {% for tenant in tenants %}
                 <tr>
+                    <td>{{ tenant.id }}</td>
                     <td>{{ tenant.empresa }}</td>
                     <td>{{ tenant.nombre_contacto }}</td>
                     <td>{{ tenant.correo }}</td>
                     <td>{{ tenant.telefono or '—' }}</td>
                     <td>{{ tenant.rfc or '—' }}</td>
                     <td class="text-end">
-                        <a href="{{ url_for('inquilinos.tenant_detail_view', tenant_id=tenant.id) }}"
-                           class="btn btn-sm btn-outline-primary">
-                            Ver
-                        </a>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{{ url_for('inquilinos.tenant_detail_view', tenant_id=tenant.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Ver
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    data-id="{{ tenant.id }}"
+                                    onclick="deleteTenant(this)">
+                                Eliminar
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
+                    <td colspan="7" class="text-center text-muted py-4">
                         No hay inquilinos registrados
                     </td>
                 </tr>
@@ -88,19 +97,56 @@
 {% block extra_js %}
 <script>
     function toggleForm() {
-        document.getElementById('form-nuevo-inquilino').classList.toggle('d-none');
+        const form = document.getElementById('form-nuevo-inquilino');
+        const btn = document.querySelector('.card-header button');
+        const isHidden = form.classList.toggle('d-none');
+        btn.textContent = isHidden ? '+ Nuevo inquilino' : 'Cancelar';
     }
 
     async function createTenant() {
         const error = document.getElementById('form-error');
         error.classList.add('d-none');
+
+        const empresa = document.getElementById('f-empresa').value.trim();
+        const contacto = document.getElementById('f-contacto').value.trim();
+        const correo = document.getElementById('f-correo').value.trim();
+        const telefono = document.getElementById('f-telefono').value.trim();
+        const rfc = document.getElementById('f-rfc').value.trim();
+
+        if (!empresa) {
+            error.textContent = "El campo 'empresa' es requerido";
+            error.classList.remove('d-none');
+            return;
+        }
+        if (!contacto) {
+            error.textContent = "El campo 'nombre_contacto' es requerido";
+            error.classList.remove('d-none');
+            return;
+        }
+        if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+            error.textContent = "El campo 'correo' no tiene un formato válido";
+            error.classList.remove('d-none');
+            return;
+        }
+        if (telefono && (!/^\d{10}$/.test(telefono))) {
+            error.textContent = "El campo 'teléfono' debe tener exactamente 10 dígitos";
+            error.classList.remove('d-none');
+            return;
+        }
+        if (rfc && (rfc.length < 12 || rfc.length > 13)) {
+            error.textContent = "El campo 'RFC' debe tener 12 o 13 caracteres";
+            error.classList.remove('d-none');
+            return;
+        }
+
         const data = {
-            empresa:         document.getElementById('f-empresa').value.trim(),
-            nombre_contacto: document.getElementById('f-contacto').value.trim(),
-            correo:          document.getElementById('f-correo').value.trim(),
-            telefono:        document.getElementById('f-telefono').value.trim() || null,
-            rfc:             document.getElementById('f-rfc').value.trim() || null,
+            empresa,
+            nombre_contacto: contacto,
+            correo,
+            telefono: telefono || null,
+            rfc: rfc || null,
         };
+
         try {
             const res = await fetch('/inquilinos/', {
                 method: 'POST',
@@ -117,6 +163,24 @@
         } catch (e) {
             error.textContent = 'Error de conexión.';
             error.classList.remove('d-none');
+        }
+    }
+
+    async function deleteTenant(btn) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este inquilino?')) return;
+        const id = btn.getAttribute('data-id');
+        try {
+            const res = await fetch('/inquilinos/' + id, {
+                method: 'DELETE',
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                alert(json.error);
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            alert('Error de conexión.');
         }
     }
 </script>

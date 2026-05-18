@@ -17,33 +17,36 @@
                 </button>
             </div>
             <div class="p-3">
-                <div class="row g-3" id="view-mode">
-                    <div class="col-6 col-md-2">
-                        <div class="stat-label">Empresa</div>
-                        <div>{{ tenant.empresa }}</div>
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <div class="stat-label">Contacto</div>
-                        <div>{{ tenant.nombre_contacto }}</div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="stat-label">Correo</div>
-                        <div>{{ tenant.correo }}</div>
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <div class="stat-label">Teléfono</div>
-                        <div>{{ tenant.telefono or '—' }}</div>
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <div class="stat-label">RFC</div>
-                        <div>{{ tenant.rfc or '—' }}</div>
-                    </div>
-                    <div class="col-6 col-md-1">
-                        <div class="stat-label">Creado</div>
-                        <div>{{ tenant.creado_en[:10] }}</div>
-                    </div>
+              <div class="row g-3" id="view-mode">
+                <div class="col-6 col-md-1">
+                  <div class="stat-label">ID</div>
+                  <div>{{ tenant.id }}</div>
                 </div>
-
+                <div class="col-6 col-md-2">
+                  <div class="stat-label">Empresa</div>
+                  <div>{{ tenant.empresa }}</div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-label">Contacto</div>
+                  <div>{{ tenant.nombre_contacto }}</div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-label">Correo</div>
+                  <div>{{ tenant.correo }}</div>
+                </div>
+                <div class="col-6 col-md-2">
+                  <div class="stat-label">Teléfono</div>
+                  <div>{{ tenant.telefono or '—' }}</div>
+                </div>
+                <div class="col-6 col-md-2">
+                  <div class="stat-label">RFC</div>
+                  <div>{{ tenant.rfc or '—' }}</div>
+                </div>
+                <div class="col-6 col-md-2">
+                  <div class="stat-label">Creado</div>
+                  <div>{{ tenant.creado_en[:10] }}</div>
+                </div>
+              </div>
                 <!-- ── Edit form ─────────────────────────────────────── -->
                 <div id="edit-mode" class="d-none">
                     <div class="row g-2">
@@ -136,13 +139,47 @@
     async function updateTenant() {
         const error = document.getElementById('edit-error');
         error.classList.add('d-none');
+
+        const empresa = document.getElementById('e-empresa').value.trim();
+        const contacto = document.getElementById('e-contacto').value.trim();
+        const correo = document.getElementById('e-correo').value.trim();
+        const telefono = document.getElementById('e-telefono').value.trim();
+        const rfc = document.getElementById('e-rfc').value.trim();
+
+        if (!empresa) {
+            error.textContent = "El campo 'empresa' es requerido";
+            error.classList.remove('d-none');
+            return;
+        }
+        if (!contacto) {
+            error.textContent = "El campo 'nombre_contacto' es requerido";
+            error.classList.remove('d-none');
+            return;
+        }
+        if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+            error.textContent = "El campo 'correo' no tiene un formato válido";
+            error.classList.remove('d-none');
+            return;
+        }
+        if (telefono && !/^\d{10}$/.test(telefono)) {
+            error.textContent = "El campo 'teléfono' debe tener exactamente 10 dígitos";
+            error.classList.remove('d-none');
+            return;
+        }
+        if (rfc && (rfc.length < 12 || rfc.length > 13)) {
+            error.textContent = "El campo 'RFC' debe tener 12 o 13 caracteres";
+            error.classList.remove('d-none');
+            return;
+        }
+
         const data = {
-            empresa:         document.getElementById('e-empresa').value.trim(),
-            nombre_contacto: document.getElementById('e-contacto').value.trim(),
-            correo:          document.getElementById('e-correo').value.trim(),
-            telefono:        document.getElementById('e-telefono').value.trim() || null,
-            rfc:             document.getElementById('e-rfc').value.trim() || null,
+            empresa,
+            nombre_contacto: contacto,
+            correo,
+            telefono: telefono || null,
+            rfc: rfc || null,
         };
+
         try {
             const res = await fetch('/inquilinos/{{ tenant.id }}', {
                 method: 'PUT',

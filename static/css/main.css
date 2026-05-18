@@ -211,7 +211,10 @@ body {
 .badge-pagada        { background: #d1fae5; color: #065f46; }
 .badge-pendiente     { background: #fef3c7; color: #92400e; }
 .badge-vencida       { background: #fee2e2; color: #991b1b; }
-
+.badge-baja          { background: #d1fae5; color: #065f46; }  /* green */
+.badge-media         { background: #dbeafe; color: #1e40af; }  /* blue */
+.badge-alta          { background: #fef3c7; color: #92400e; }  /* yellow */
+.badge-urgente       { background: #fee2e2; color: #991b1b; }  /* red */
 /* ── Tables ────────────────────────────────────────────────── */
 .table th {
     font-size: 0.75rem;
@@ -307,3 +310,19 @@ body {
 }
 
 .bg-purple { background: var(--purple) !important; color: #fff !important; }
+
+/* ── Notification dropdown — dark theme ────────────────────────────── */
+[data-theme="dark"] #notif-dropdown {
+    background: #1a1a1a !important;
+    border-color: #2a2a2a !important;
+    color: #f0f0f0;
+}
+
+[data-theme="dark"] #notif-dropdown a {
+    color: #f0f0f0;
+    border-bottom-color: #2a2a2a !important;
+}
+
+[data-theme="dark"] #notif-dropdown a:hover {
+    background: #2a2a2a;
+}

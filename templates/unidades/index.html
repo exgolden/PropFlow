@@ -17,10 +17,6 @@
     <div id="form-nueva-unidad" class="p-3 border-bottom d-none">
         <div class="row g-2">
             <div class="col-12 col-md-2">
-                <label class="form-label">Número</label>
-                <input type="text" class="form-control form-control-sm" id="f-numero" placeholder="A-01">
-            </div>
-            <div class="col-12 col-md-2">
                 <label class="form-label">Área (m²)</label>
                 <input type="number" class="form-control form-control-sm" id="f-area" placeholder="45.5">
             </div>
@@ -51,7 +47,7 @@
         <table class="table mb-0">
             <thead>
                 <tr>
-                    <th>Número</th>
+                    <th>ID Unidad</th>
                     <th>Tipo</th>
                     <th>Área</th>
                     <th>Renta base</th>
@@ -95,14 +91,21 @@
 <script>
     function toggleForm() {
         const form = document.getElementById('form-nueva-unidad');
-        form.classList.toggle('d-none');
+        const btn = document.querySelector('.card-header button');
+        const isHidden = form.classList.toggle('d-none');
+        btn.textContent = isHidden ? '+ Nueva unidad' : 'Cancelar';
+        if (isHidden) {
+            document.getElementById('f-area').value = '';
+            document.getElementById('f-tipo').value = '';
+            document.getElementById('f-renta').value = '';
+            document.getElementById('form-error').classList.add('d-none');
+        }
     }
 
     async function createUnit() {
         const error = document.getElementById('form-error');
         error.classList.add('d-none');
         const data = {
-            numero:     document.getElementById('f-numero').value.trim(),
             area_m2:    parseFloat(document.getElementById('f-area').value),
             tipo:       document.getElementById('f-tipo').value,
             renta_base: parseFloat(document.getElementById('f-renta').value),

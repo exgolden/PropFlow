@@ -1,0 +1,22 @@
+services:
+  propflow:
+    build: .
+    container_name: propflow
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./static/uploads:/app/static/uploads
+      - ./db:/app/db
+      - ./logs:/app/logs
+    networks:
+      - saas_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  saas_network:
+    external: true

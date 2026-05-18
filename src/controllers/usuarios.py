@@ -1,4 +1,8 @@
-# src/controllers/usuarios.py
+"""
+Controller para la gestión de usuarios y autenticación.
+Maneja creación, consulta, actualización, activación/desactivación
+y autenticación de usuarios. Nunca expone contrasena_hash al cliente.
+"""
 import bcrypt
 from db.init import get_db
 from src.logger import get_logger
@@ -22,18 +26,18 @@ def get_all_users() -> list[dict]:
         return [dict(row) for row in cursor.fetchall()]
 
 
-def get_user(id: int) -> dict | None:
+def get_user(user_id: int) -> dict | None:
     """
     Returns a single user by ID without contrasena_hash, or None if not found.
     """
-    logger.debug(f"Fetching user id={id}")
+    logger.debug("Fetching user user_id=%s", user_id)
     with get_db() as conn:
         cursor = conn.execute(
             """
             SELECT id, nombre, correo, rol, activo, creado_en, ultimo_acceso
             FROM usuarios WHERE id = ?
             """,
-            (id,)
+            (user_id,)
         )
         row = cursor.fetchone()
         return dict(row) if row else None
@@ -44,7 +48,7 @@ def get_user_by_email(correo: str) -> dict | None:
     Returns a single user by email including contrasena_hash.
     Only used internally for authentication — never returned to the client.
     """
-    logger.debug(f"Fetching user by email correo={correo}")
+    logger.debug("Fetching user by email correo=%s", correo)
     with get_db() as conn:
         cursor = conn.execute(
             "SELECT * FROM usuarios WHERE correo = ?",
@@ -64,7 +68,7 @@ def create_user(data: dict) -> dict:
         if not data.get(field):
             raise ValueError(f"El campo '{field}' es requerido")
     if get_user_by_email(data["correo"]):
-        logger.warning(f"Attempted to create duplicate user correo={data['correo']}")
+        logger.warning("Attempted to create duplicate user correo=%s", data["correo"])
         raise ValueError("Ya existe un usuario con ese correo")
     contrasena_hash = bcrypt.hashpw(
         data["contrasena"].encode("utf-8"),
@@ -84,18 +88,18 @@ def create_user(data: dict) -> dict:
             )
         )
         user_id = cursor.lastrowid
-    logger.info(f"User created id={user_id} correo={data['correo']} rol={data['rol']}")
+    logger.info("User created user_id=%s correo=%s rol=%s", user_id, data["correo"], data["rol"])
     return get_user(user_id)
 
 
-def update_user(id: int, data: dict) -> dict | None:
+def update_user(user_id: int, data: dict) -> dict | None:
     """
     Updates an existing user. Password is rehashed if provided.
     Returns the updated user, or None if not found.
     """
-    user = get_user(id)
+    user = get_user(user_id)
     if not user:
-        logger.warning(f"User not found id={id}")
+        logger.warning("User not found user_id=%s", user_id)
         return None
     allowed_fields = ["nombre", "correo"]
     updates = {k: v for k, v in data.items() if k in allowed_fields}
@@ -107,56 +111,59 @@ def update_user(id: int, data: dict) -> dict | None:
     if not updates:
         return user
     columns = ", ".join(f"{k} = ?" for k in updates.keys())
-    values = list(updates.values()) + [id]
+    values = list(updates.values()) + [user_id]
     with get_db() as conn:
         conn.execute(
-            f"UPDATE usuarios SET {columns} WHERE id = ?",
+            f"UPDATE usuarios SET {columns} WHERE id = ?", # nosec B608
             values
         )
-    logger.info(f"User updated id={id} fields={[k for k in updates.keys() if k != 'contrasena_hash']}")
-    return get_user(id)
+    logger.info("User updated user_id=%s fields=%s", user_id, [k for k in updates.keys() if k != "contrasena_hash"])
+    return get_user(user_id)
 
 
-def deactivate_user(id: int) -> dict | None:
+def deactivate_user(user_id: int) -> dict | None:
     """
     Deactivates a user by setting activo to 0.
     Returns the updated user, or None if not found.
     """
-    user = get_user(id)
+    user = get_user(user_id)
     if not user:
-        logger.warning(f"User not found for deactivation id={id}")
+        logger.warning("User not found for deactivation user_id=%s", user_id)
         return None
+    if user["rol"] == "root":
+        logger.warning("Attempted to deactivate root user user_id=%s", user_id)
+        raise ValueError("El usuario root no puede ser desactivado")
     if not user["activo"]:
-        logger.warning(f"Attempted to deactivate already inactive user id={id}")
+        logger.warning("Attempted to deactivate already inactive user user_id=%s", user_id)
         raise ValueError("El usuario ya está desactivado")
     with get_db() as conn:
         conn.execute(
             "UPDATE usuarios SET activo = 0 WHERE id = ?",
-            (id,)
+            (user_id,)
         )
-    logger.info(f"User deactivated id={id}")
-    return get_user(id)
+    logger.info("User deactivated user_id=%s", user_id)
+    return get_user(user_id)
 
 
-def reactivate_user(id: int) -> dict | None:
+def reactivate_user(user_id: int) -> dict | None:
     """
     Reactivates a previously deactivated user.
     Returns the updated user, or None if not found.
     """
-    user = get_user(id)
+    user = get_user(user_id)
     if not user:
-        logger.warning(f"User not found for reactivation id={id}")
+        logger.warning("User not found for reactivation user_id=%s", user_id)
         return None
     if user["activo"]:
-        logger.warning(f"Attempted to reactivate already active user id={id}")
+        logger.warning("Attempted to reactivate already active user user_id=%s", user_id)
         raise ValueError("El usuario ya está activo")
     with get_db() as conn:
         conn.execute(
             "UPDATE usuarios SET activo = 1 WHERE id = ?",
-            (id,)
+            (user_id,)
         )
-    logger.info(f"User reactivated id={id}")
-    return get_user(id)
+    logger.info("User reactivated user_id=%s", user_id)
+    return get_user(user_id)
 
 
 def authenticate_user(correo: str, contrasena: str) -> dict | None:
@@ -166,22 +173,22 @@ def authenticate_user(correo: str, contrasena: str) -> dict | None:
     """
     user = get_user_by_email(correo)
     if not user:
-        logger.warning(f"Login failed — user not found correo={correo}")
+        logger.warning("Login failed — user not found correo=%s", correo)
         return None
     if not user["activo"]:
-        logger.warning(f"Login failed — inactive user correo={correo}")
+        logger.warning("Login failed — inactive user correo=%s", correo)
         return None
     password_matches = bcrypt.checkpw(
         contrasena.encode("utf-8"),
         user["contrasena_hash"].encode("utf-8")
     )
     if not password_matches:
-        logger.warning(f"Login failed — wrong password correo={correo}")
+        logger.warning("Login failed — wrong password correo=%s", correo)
         return None
     with get_db() as conn:
         conn.execute(
             "UPDATE usuarios SET ultimo_acceso = datetime('now') WHERE id = ?",
             (user["id"],)
         )
-    logger.info(f"Login successful id={user['id']} correo={correo}")
+    logger.info("Login successful user_id=%s correo=%s", user["id"], correo)
     return get_user(user["id"])

@@ -15,7 +15,7 @@ SCHEMA_FILES = [
     "facturas.sql",
     "mantenimientos.sql",
     "documentos.sql",
-    "notificaciones_log.sql",
+    "tokens_descarga.sql"
 ]
 
 

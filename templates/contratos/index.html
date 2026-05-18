@@ -17,12 +17,22 @@
     <div id="form-nuevo-contrato" class="p-3 border-bottom d-none">
         <div class="row g-2">
             <div class="col-12 col-md-2">
-                <label class="form-label">ID Unidad</label>
-                <input type="number" class="form-control form-control-sm" id="f-unidad" placeholder="1">
+                <label class="form-label">Unidad</label>
+                <select class="form-select form-select-sm" id="f-unidad">
+                    <option value="">Seleccionar</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.id }}">{{ unit.numero }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-12 col-md-2">
-                <label class="form-label">ID Inquilino</label>
-                <input type="number" class="form-control form-control-sm" id="f-inquilino" placeholder="1">
+                <label class="form-label">Inquilino</label>
+                <select class="form-select form-select-sm" id="f-inquilino">
+                    <option value="">Seleccionar</option>
+                    {% for tenant in tenants %}
+                    <option value="{{ tenant.id }}">{{ tenant.empresa }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-12 col-md-2">
                 <label class="form-label">Fecha inicio</label>
@@ -57,8 +67,9 @@
         <table class="table mb-0">
             <thead>
                 <tr>
-                    <th>Unidad</th>
-                    <th>Inquilino</th>
+                    <th>ID Contrato</th>
+                    <th>ID Unidad</th>
+                    <th>ID Inquilino</th>
                     <th>Renta mensual</th>
                     <th>Inicio</th>
                     <th>Fin</th>
@@ -69,8 +80,9 @@
             <tbody>
                 {% for contract in contracts %}
                 <tr>
-                    <td># {{ contract.unidad_id }}</td>
-                    <td># {{ contract.inquilino_id }}</td>
+                    <td>{{ contract.id }}</td>
+                    <td>{{ contract.unidad_id }}</td>
+                    <td>{{ contract.inquilino_id }}</td>
                     <td>${{ "{:,.0f}".format(contract.renta_mensual) }}</td>
                     <td>{{ contract.fecha_inicio }}</td>
                     <td>{{ contract.fecha_fin }}</td>
@@ -88,7 +100,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
+                    <td colspan="8" class="text-center text-muted py-4">
                         No hay contratos registrados
                     </td>
                 </tr>
@@ -102,7 +114,20 @@
 {% block extra_js %}
 <script>
     function toggleForm() {
-        document.getElementById('form-nuevo-contrato').classList.toggle('d-none');
+        const form = document.getElementById('form-nuevo-contrato');
+        const btn = document.querySelector('.card-header button');
+        const isHidden = form.classList.toggle('d-none');
+        btn.textContent = isHidden ? '+ Nuevo contrato' : 'Cancelar';
+        if (isHidden) {
+            document.getElementById('f-unidad').value = '';
+            document.getElementById('f-inquilino').value = '';
+            document.getElementById('f-inicio').value = '';
+            document.getElementById('f-fin').value = '';
+            document.getElementById('f-renta').value = '';
+            document.getElementById('f-deposito').value = '';
+            document.getElementById('f-dia').value = '';
+            document.getElementById('form-error').classList.add('d-none');
+        }
     }
 
     async function createContract() {
