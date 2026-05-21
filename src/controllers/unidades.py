@@ -14,6 +14,9 @@ _TIPO_PREFIX = {
     "local":        "LC",
     "bodega":       "BD",
     "consultorio":  "CN",
+    "apartamento":  "AP",
+    "casa":         "CA",
+    "terreno":      "TR"
 }
 
 
